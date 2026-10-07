@@ -109,7 +109,7 @@ NATURAL JOIN Consultorio;
 
 ---
 
-### I. Left Join / Unión Externa Izquierda ($\Leftbowtie$)
+### I. Left Join / Unión Externa Izquierda ($\Leftouterjoin$)
 * **Qué hace:** Muestra **todas las filas de la primera tabla (izquierda)**. Si alguna fila no encuentra coincidencia en la tabla de la derecha, no se elimina; simplemente rellena los datos faltantes con `NULL`.
 * **Símbolo:** $\text{TablaA} \leftouterjoin_{\text{condición}} \text{TablaB}$
 * **SQL:**
@@ -144,33 +144,42 @@ GROUP BY plan_id;
 
 ## 3. Cálculo Relacional
 
+**Concepto General:** Si el Álgebra Relacional era el "paso a paso" algorítmico, el Cálculo Relacional es pedir el resultado de manera más directa, usando **únicamente operadores lógicos** (`Y`, `O`, `Existe`, `Para Todo`).
+
 ### A. Cálculo Relacional de Tuplas (TRC)
-En TRC usas variables que representan **filas completas** (ej. $t$, $m$, $r$).
+Se inventa una letra (variable) para representar una **fila entera**. Toda consulta de tuplas tiene esta forma estándar:
 
 * **Plantilla Básica:**
-  $\{ t.\text{atributo1}, t.\text{atributo2} \mid \text{Tabla}(t) \land \text{Condiciones} \}$
+  `{ LO QUE SE QUIERE MOSTRAR | DE DÓNDE SALE y QUÉ CONDICIÓN CUMPLE }`
 
 * **Ejemplo 1 (Filtro simple):**
-  $\{ m.\text{nombre} \mid \text{Miembro}(m) \land m.\text{plan\_id} = 10 \}$
+  `{ m.nombre | Medico(m) y m.salario > 5000 }`
+  *(Te da los nombres de la tabla Médicos cuya variable asignada para sus filas es "m" que tengan un salario mayor a 5000).*
 
-* **Ejemplo 2 (Cruzar dos tablas con existencial):**
-  $\{ m.\text{nombre}, p.\text{nombre} \mid \text{Miembro}(m) \land (\exists p)(\text{Plan}(p) \land m.\text{plan\_id} = p.\text{cod\_plan}) \}$
+* **Ejemplo 2 (Cruzar tablas con Existencial E):**
+  ¿Cómo relacionar más de una tabla? Se usan cuantificadores como el "Existe algún" (E o $\exists$).
+  `{ m.nombre, c.nombre | Medico(m) y (Ec) Consultorio(c) y m.id_consultorio = c.id_consultorio }`
+  *(Te devuelve el nombre del médico y del consultorio de la tabla Médico **siempre y cuando exista** una fila "c" perteneciente a la tabla Consultorio, cuyo ID corresponda al del médico).*
+
+* **Ejemplo 3 (El Universal "Para todo" A o $\forall$):**
+  Se usa siempre junto a la Implicación ($\implies$ que significa "entonces") para buscar elementos que cumplen con **toda** una lista.
+  **Problema:** *"Nombres de médicos que atendieron a TODOS los pacientes con sarampión"*.
+  `{ m.nombre | Medico(m) y (Ap)( Paciente(p) y p.enfermedad = 'sarampión' => (Ea)(Atencion(a) y a.id_medico = m.id_medico y a.id_paciente = p.id_paciente) ) }`
+  *(Para **todo** paciente "p" con sarampión, **entonces** obligatoriamente debe **existir** una atención "a" que una al médico "m" con ese paciente "p").*
 
 ---
 
 ### B. Cálculo Relacional de Dominios (DRC)
-En DRC usas una **variable individual por cada columna** de la tabla.
+Similar al anterior, pero ahora usamos letras para **cada columna** en lugar de toda la fila. 
 
-* **Plantilla Básica:**
-  $\{ \langle x_1, x_2 \rangle \mid \exists x_3 \exists x_4 (\text{Tabla}(x_1, x_2, x_3, x_4) \land \text{Condiciones}) \}$
-
-* **Reglas de oro para DRC:**
-  1. Si `Miembro` tiene 4 columnas `(cod, nombre, fecha, plan)`, defines variables: $\text{Miembro}(c, n, f, p)$.
-  2. En el resultado $\{ \langle n \rangle \}$ colocas solo las variables que vas a mostrar.
-  3. Usas $\exists$ para todas las variables que usaste pero que NO van a mostrarse en la salida.
+* **Regla de Oro:** 
+  1. Al atributo que queremos mostrar lo ponemos entre signos `< >`.
+  2. A los atributos que **NO** queremos mostrar les ponemos una "E" al revés ($\exists$) al costado.
 
 * **Ejemplo:**
-  $\{ \langle n \rangle \mid \exists c \exists f \exists p (\text{Miembro}(c, n, f, p) \land p = 10) \}$
+  Imagina que tenemos 3 atributos en la tabla Médico: Nombre, Asignatura y Nota. Les asignamos las letras `n`, `a`, `no`.
+  `{ <n> | EaEno (Medico(n, a, no) y no > 30) }`
+  *(Muestra el nombre `<n>` de todos los médicos, con 3 atributos asignados a una letra, cuya nota `no` sea mayor a 30. A las variables `a` y `no` se les pone `E` porque no se imprimirán en el resultado).*
 
 ---
 
@@ -192,7 +201,7 @@ CREATE TABLE Miembro (
 );
 ```
 
-### B. Modificar la Estructura de una Tabla (`ALTER TABLE`)
+### B. Modificar la Estructura de una Tabla (ALTER TABLE)
 ```sql
 -- Agregar una columna nueva
 ALTER TABLE Inventario 
@@ -203,13 +212,13 @@ ALTER TABLE Inventario
 DROP COLUMN PrecioFinal;
 ```
 
-### C. Insertar Registros (`INSERT INTO`)
+### C. Insertar Registros (INSERT INTO)
 ```sql
 INSERT INTO Miembro (cod_miembro, nombre, fecha_ingreso, plan_id) 
 VALUES (1, 'Juan Perez', '2026-01-15', 10);
 ```
 
-### D. Actualizar o Calcular Datos (`UPDATE`)
+### D. Actualizar o Calcular Datos (UPDATE)
 ```sql
 -- Modificar un registro con filtro
 UPDATE Miembro 
@@ -221,7 +230,7 @@ UPDATE Inventario
 SET PrecioFinal = Precio + (Precio * 0.12);
 ```
 
-### E. Eliminar Filas (`DELETE`)
+### E. Eliminar Filas (DELETE)
 ```sql
 DELETE FROM Miembro 
 WHERE cod_miembro = 1;
@@ -239,10 +248,10 @@ WHERE cod_miembro = 1;
    * Contar / Sumar / Promediar $\rightarrow$ $\mathcal{G}_{\text{grupo}; \text{FUNCION} \to \text{alias}}(R)$
 
 2. **¿Piden Cálculo de Tuplas (TRC)?**
-   * Sigue la estructura: $\{ t.\text{atributos} \mid \text{Tabla}(t) \land (\exists x)(\text{Tabla2}(x) \land \text{enlace}) \}$
+   * Sigue la estructura: `{ t.atributos | Tabla(t) y (Ex)(Tabla2(x) y enlace) }`
 
 3. **¿Piden Cálculo de Dominios (DRC)?**
-   * Asigna una variable a cada columna: $\{ \langle n, f \rangle \mid \exists c \exists p (\text{Tabla}(c, n, f, p) \land \dots) \}$
+   * Asigna una variable a cada columna: `{ <n, f> | EcEp (Tabla(c, n, f, p) y ...) }`
 
 4. **¿Piden Modificar/Estructura SQL?**
    * Agregar columna $\rightarrow$ `ALTER TABLE ... ADD ...`
